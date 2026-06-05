@@ -1,0 +1,753 @@
+openapi: 3.0.3
+info:
+  title: 'BriBooks API Documentation'
+  description: ''
+  version: 1.0.0
+servers:
+  -
+    url: 'http://localhost:8000'
+tags:
+  -
+    name: Endpoints
+    description: ''
+paths:
+  /api/auth/register:
+    post:
+      summary: 'POST /api/register'
+      operationId: pOSTapiregister
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: zbailey@example.net
+                password:
+                  type: string
+                  description: 'Must be at least 8 characters.'
+                  example: '-0pBNvYgxw'
+                role:
+                  type: string
+                  description: ''
+                  example: reviewer
+                  enum:
+                    - author
+                    - reviewer
+                    - admin
+              required:
+                - name
+                - email
+                - password
+      security: []
+  /api/auth/login:
+    post:
+      summary: 'POST /api/login'
+      operationId: pOSTapilogin
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  description: 'Must be a valid email address.'
+                  example: gbailey@example.net
+                password:
+                  type: string
+                  description: ''
+                  example: '|]|{+-'
+              required:
+                - email
+                - password
+      security: []
+  /api/profile:
+    get:
+      summary: 'GET /api/profile'
+      operationId: gETapiprofile
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+  /api/logout:
+    post:
+      summary: 'POST /api/logout'
+      operationId: pOSTapilogout
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  /api/auth/refresh:
+    post:
+      summary: 'POST /api/refresh'
+      operationId: pOSTapirefresh
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+  /api/dashboard:
+    get:
+      summary: 'GET /api/dashboard'
+      operationId: gETapidashboard
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+  /api/books:
+    get:
+      summary: 'GET /api/books'
+      operationId: gETapibooks
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'POST /api/books'
+      operationId: pOSTapibooks
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                genre:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: v
+                  nullable: true
+                language:
+                  type: string
+                  description: 'Must be 2 characters.'
+                  example: dl
+                  nullable: true
+              required:
+                - title
+      security: []
+  '/api/books/{id}':
+    get:
+      summary: 'GET /api/books/{id}'
+      operationId: gETapibooksid
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    put:
+      summary: 'PUT /api/books/{id}'
+      operationId: pUTapibooksid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                genre:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: v
+                  nullable: true
+                language:
+                  type: string
+                  description: 'Must be 2 characters.'
+                  example: dl
+                  nullable: true
+      security: []
+    delete:
+      summary: 'DELETE /api/books/{id}'
+      operationId: dELETEapibooksid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/versions':
+    post:
+      summary: "POST /api/books/{id}/versions\nCreate a new version snapshot of the current book state."
+      operationId: pOSTapibooksidversionsCreateANewVersionSnapshotOfTheCurrentBookState
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:
+                  type: string
+                  description: 'Must not be greater than 100 characters.'
+                  example: b
+                  nullable: true
+                change_notes:
+                  type: string
+                  description: 'Must not be greater than 1000 characters.'
+                  example: 'n'
+                  nullable: true
+      security: []
+    get:
+      summary: 'GET /api/books/{id}/versions'
+      operationId: gETapibooksidversions
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/versions/{version_id}':
+    get:
+      summary: 'GET /api/books/{id}/versions/{versionId}'
+      operationId: gETapibooksidversionsversionId
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: version_id
+        description: 'The ID of the version.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/versions/{version_id}/restore':
+    post:
+      summary: "POST /api/books/{id}/versions/{versionId}/restore\nRollback book content to a previous version."
+      operationId: pOSTapibooksidversionsversionIdrestoreRollbackBookContentToAPreviousVersion
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+      -
+        in: path
+        name: version_id
+        description: 'The ID of the version.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/chapters':
+    get:
+      summary: 'GET /api/books/{id}/chapters'
+      operationId: gETapibooksidchapters
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'POST /api/books/{id}/chapters'
+      operationId: pOSTapibooksidchapters
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                order:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  example: 60
+                  nullable: true
+              required:
+                - title
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/chapters/{chapter_id}':
+    put:
+      summary: 'PUT /api/chapters/{id}'
+      operationId: pUTapichaptersid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  description: 'Must not be greater than 255 characters.'
+                  example: b
+                description:
+                  type: string
+                  description: ''
+                  example: 'Eius et animi quos velit et.'
+                  nullable: true
+                order:
+                  type: integer
+                  description: 'Must be at least 0.'
+                  example: 60
+      security: []
+    delete:
+      summary: 'DELETE /api/chapters/{id}'
+      operationId: dELETEapichaptersid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: chapter_id
+        description: 'The ID of the chapter.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/chapters/{chapter_id}/pages':
+    get:
+      summary: 'GET /api/chapters/{id}/pages'
+      operationId: gETapichaptersidpages
+      description: ''
+      parameters: []
+      responses:
+        500:
+          description: ''
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: 'Server Error'
+                properties:
+                  message:
+                    type: string
+                    example: 'Server Error'
+      tags:
+        - Endpoints
+      security: []
+    post:
+      summary: 'POST /api/chapters/{id}/pages'
+      operationId: pOSTapichaptersidpages
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: ''
+                  example: architecto
+                content_type:
+                  type: string
+                  description: ''
+                  example: text
+                  enum:
+                    - html
+                    - text
+                    - markdown
+                  nullable: true
+                page_number:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  example: 22
+                  nullable: true
+              required:
+                - content
+      security: []
+    parameters:
+      -
+        in: path
+        name: chapter_id
+        description: 'The ID of the chapter.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/pages/{page_id}':
+    put:
+      summary: 'PUT /api/pages/{id}'
+      operationId: pUTapipagesid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:
+                  type: string
+                  description: ''
+                  example: architecto
+                content_type:
+                  type: string
+                  description: ''
+                  example: markdown
+                  enum:
+                    - html
+                    - text
+                    - markdown
+                page_number:
+                  type: integer
+                  description: 'Must be at least 1.'
+                  example: 22
+      security: []
+    delete:
+      summary: 'DELETE /api/pages/{id}'
+      operationId: dELETEapipagesid
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: page_id
+        description: 'The ID of the page.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/upload':
+    post:
+      summary: "POST /api/books/{id}/upload\nUpload a .doc or .docx manuscript; dispatches conversion job."
+      operationId: pOSTapibooksiduploadUploadAdocOrdocxManuscriptDispatchesConversionJob
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                manuscript:
+                  type: string
+                  format: binary
+                  description: 'Must be a file. Must not be greater than 20480 kilobytes.'
+              required:
+                - manuscript
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/submit':
+    post:
+      summary: "POST /api/books/{id}/submit\nOnly Authors can submit."
+      operationId: pOSTapibooksidsubmitOnlyAuthorsCanSubmit
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/approve':
+    post:
+      summary: "POST /api/books/{id}/approve\nOnly Reviewers can approve."
+      operationId: pOSTapibooksidapproveOnlyReviewersCanApprove
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/reject':
+    post:
+      summary: "POST /api/books/{id}/reject\nOnly Reviewers can reject."
+      operationId: pOSTapibooksidrejectOnlyReviewersCanReject
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+                  description: 'Must be at least 10 characters. Must not be greater than 1000 characters.'
+                  example: b
+              required:
+                - reason
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
+  '/api/books/{book_id}/publish':
+    post:
+      summary: "POST /api/books/{id}/publish\nOnly Admins can publish."
+      operationId: pOSTapibooksidpublishOnlyAdminsCanPublish
+      description: ''
+      parameters: []
+      responses: {  }
+      tags:
+        - Endpoints
+      security: []
+    parameters:
+      -
+        in: path
+        name: book_id
+        description: 'The ID of the book.'
+        example: 16
+        required: true
+        schema:
+          type: integer
