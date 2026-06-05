@@ -1,0 +1,1074 @@
+openapi: 3.0.3
+
+info:
+  title: BriBooks Platform API
+  description: |
+    Complete REST API for the BriBooks mini book creation and publishing platform.
+
+    ## Authentication
+    All protected endpoints require a **JWT Bearer token** in the Authorization header:
+    ```
+    Authorization: Bearer <your_jwt_token>
+    ```
+
+    ## Roles
+    | Role | Capabilities |
+    |------|-------------|
+    | `author` | Create/manage books, chapters, pages, versions; submit for review |
+    | `reviewer` | Approve or reject submitted books |
+    | `admin` | Publish approved books; view all data |
+
+    ## Publishing Workflow
+    ```
+    draft → submitted → under_review → approved → published
+                              ↓
+                          rejected
+    ```
+    Published books are **permanently read-only**.
+
+  version: 1.0.0
+  contact:
+    name: BriBooks Platform
+    email: dev@bribooks.com
+
+servers:
+  - url: http://localhost:8000/api
+    description: Local development server
+  - url: https://api.bribooks.com/api
+    description: Production server
+
+tags:
+  - name: Auth
+    description: Registration, login, token management
+  - name: Books
+    description: Book CRUD operations
+  - name: Versions
+    description: Book version snapshots and rollback
+  - name: Chapters
+    description: Chapter management
+  - name: Pages
+    description: Page content management
+  - name: Upload
+    description: Document upload and conversion
+  - name: Workflow
+    description: Book publishing workflow transitions
+  - name: Dashboard
+    description: Role-specific stats dashboard
+
+# ═══════════════════════════════════════════════════════════════
+# SECURITY
+# ═══════════════════════════════════════════════════════════════
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  # ─────────────────────────────────────────
+  # SCHEMAS
+  # ─────────────────────────────────────────
+  schemas:
+
+    User:
+      type: object
+      properties:
+        id:          { type: integer, example: 1 }
+        name:        { type: string,  example: "Jane Doe" }
+        email:       { type: string,  format: email, example: "jane@example.com" }
+        role:        { type: string,  enum: [author, reviewer, admin] }
+        created_at:  { type: string,  format: date-time }
+
+    Book:
+      type: object
+      properties:
+        id:               { type: integer, example: 5 }
+        title:            { type: string,  example: "The Lost City" }
+        description:      { type: string,  nullable: true }
+        genre:            { type: string,  nullable: true, example: "Adventure" }
+        language:         { type: string,  example: "en" }
+        status:
+          type: string
+          enum: [draft, submitted, under_review, approved, published, rejected]
+        cover_image:      { type: string, nullable: true }
+        rejection_reason: { type: string, nullable: true }
+        author:           { $ref: '#/components/schemas/User' }
+        submitted_at:     { type: string, format: date-time, nullable: true }
+        approved_at:      { type: string, format: date-time, nullable: true }
+        published_at:     { type: string, format: date-time, nullable: true }
+        created_at:       { type: string, format: date-time }
+        updated_at:       { type: string, format: date-time }
+
+    Chapter:
+      type: object
+      properties:
+        id:          { type: integer, example: 1 }
+        book_id:     { type: integer, example: 5 }
+        title:       { type: string,  example: "Chapter 1: The Beginning" }
+        description: { type: string,  nullable: true }
+        order:       { type: integer, example: 1 }
+        pages_count: { type: integer, example: 4 }
+        created_at:  { type: string,  format: date-time }
+
+    Page:
+      type: object
+      properties:
+        id:           { type: integer, example: 1 }
+        chapter_id:   { type: integer, example: 1 }
+        content:      { type: string,  example: "<p>It was a dark and stormy night...</p>" }
+        content_type: { type: string,  enum: [html, text, markdown], example: "html" }
+        page_number:  { type: integer, example: 1 }
+        created_at:   { type: string,  format: date-time }
+
+    BookVersion:
+      type: object
+      properties:
+        id:             { type: integer, example: 3 }
+        book_id:        { type: integer, example: 5 }
+        version_number: { type: integer, example: 3 }
+        label:          { type: string,  nullable: true, example: "v1.2" }
+        change_notes:   { type: string,  nullable: true }
+        snapshot:
+          type: object
+          properties:
+            metadata:
+              type: object
+              properties:
+                title:       { type: string }
+                description: { type: string, nullable: true }
+                genre:       { type: string, nullable: true }
+                language:    { type: string }
+                status:      { type: string }
+            chapters:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:          { type: integer }
+                  title:       { type: string }
+                  description: { type: string, nullable: true }
+                  order:       { type: integer }
+                  pages:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:           { type: integer }
+                        content:      { type: string }
+                        content_type: { type: string }
+                        page_number:  { type: integer }
+        created_by:  { $ref: '#/components/schemas/User' }
+        created_at:  { type: string, format: date-time }
+
+    AuthTokenResponse:
+      type: object
+      properties:
+        access_token: { type: string, example: "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..." }
+        token_type:   { type: string, example: "bearer" }
+        expires_in:   { type: integer, example: 3600, description: "Seconds until expiry" }
+        user:         { $ref: '#/components/schemas/User' }
+
+    PaginationMeta:
+      type: object
+      properties:
+        current_page: { type: integer, example: 1 }
+        last_page:    { type: integer, example: 5 }
+        total:        { type: integer, example: 72 }
+
+    ValidationError:
+      type: object
+      properties:
+        message: { type: string, example: "Validation failed." }
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+          example:
+            title: ["The title field is required."]
+            email: ["The email has already been taken."]
+
+    ErrorResponse:
+      type: object
+      properties:
+        message: { type: string, example: "You do not own this book." }
+
+# ═══════════════════════════════════════════════════════════════
+# PATHS
+# ═══════════════════════════════════════════════════════════════
+paths:
+
+  # ─────────────────────────────────────────
+  # AUTH
+  # ─────────────────────────────────────────
+
+  /register:
+    post:
+      tags: [Auth]
+      summary: Register a new user
+      description: Creates a new user account and returns a JWT token immediately.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, email, password, password_confirmation]
+              properties:
+                name:                  { type: string, example: "Jane Doe" }
+                email:                 { type: string, format: email, example: "jane@example.com" }
+                password:              { type: string, minLength: 8, example: "secret1234" }
+                password_confirmation: { type: string, example: "secret1234" }
+                role:
+                  type: string
+                  enum: [author, reviewer, admin]
+                  default: author
+      responses:
+        '201':
+          description: User registered
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Registration successful." }
+                  user:    { $ref: '#/components/schemas/User' }
+                  token:   { type: string, example: "eyJ0eXAi..." }
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  /login:
+    post:
+      tags: [Auth]
+      summary: Login and receive JWT
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email, example: "jane@example.com" }
+                password: { type: string, example: "secret1234" }
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /profile:
+    get:
+      tags: [Auth]
+      summary: Get authenticated user profile
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user: { $ref: '#/components/schemas/User' }
+        '401':
+          description: Unauthenticated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate JWT token
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Logged out successfully." }
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh JWT token
+      description: Returns a new token. Send the current (unexpired) token in the Authorization header.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: New token issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthTokenResponse' }
+
+  # ─────────────────────────────────────────
+  # BOOKS
+  # ─────────────────────────────────────────
+
+  /books:
+    get:
+      tags: [Books]
+      summary: List books
+      description: Authors see only their own books. Reviewers and Admins see all.
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: status
+          in: query
+          description: Filter by book status
+          schema:
+            type: string
+            enum: [draft, submitted, under_review, approved, published, rejected]
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: Paginated book list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Book' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+    post:
+      tags: [Books]
+      summary: Create a new book
+      description: Only authors can create books.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:       { type: string, example: "The Lost City" }
+                description: { type: string, example: "An epic adventure." }
+                genre:       { type: string, example: "Adventure" }
+                language:    { type: string, example: "en", description: "ISO 639-1 2-char code" }
+      responses:
+        '201':
+          description: Book created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Only authors may create books
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Validation failed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  /books/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: Book ID
+
+    get:
+      tags: [Books]
+      summary: Get a single book
+      description: Includes nested chapters, pages, and version count.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Author accessing another author's book
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '404':
+          description: Book not found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+    put:
+      tags: [Books]
+      summary: Update book metadata
+      description: Partial update. Cannot update published books.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:       { type: string }
+                description: { type: string, nullable: true }
+                genre:       { type: string, nullable: true }
+                language:    { type: string }
+      responses:
+        '200':
+          description: Book updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+    delete:
+      tags: [Books]
+      summary: Soft-delete a book
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book deleted successfully." }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # ─────────────────────────────────────────
+  # VERSIONS
+  # ─────────────────────────────────────────
+
+  /books/{id}/versions:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Versions]
+      summary: Create a version snapshot
+      description: Captures a full JSON snapshot of the current book state.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                label:        { type: string, example: "v1.2", description: "Human-readable label" }
+                change_notes: { type: string, example: "Revised chapter 2", maxLength: 1000 }
+      responses:
+        '201':
+          description: Snapshot created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/BookVersion' }
+        '403':
+          description: Not owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+    get:
+      tags: [Versions]
+      summary: List all versions of a book
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+      responses:
+        '200':
+          description: Paginated versions list (newest first, 10 per page)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/BookVersion' }
+                  meta: { $ref: '#/components/schemas/PaginationMeta' }
+
+  /books/{id}/versions/{versionId}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      tags: [Versions]
+      summary: Get a specific version with full snapshot
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Version detail including full snapshot
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: '#/components/schemas/BookVersion' }
+        '404':
+          description: Version not found for this book
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /books/{id}/versions/{versionId}/restore:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+      - name: versionId
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Versions]
+      summary: Rollback book to a previous version
+      description: |
+        Replaces all current chapters and pages with the snapshot data.
+        This is a **destructive** operation — the current live state is overwritten.
+        Consider creating a new snapshot first to preserve current state.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book restored
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book restored to version 2." }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # ─────────────────────────────────────────
+  # CHAPTERS
+  # ─────────────────────────────────────────
+
+  /books/{id}/chapters:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    get:
+      tags: [Chapters]
+      summary: List chapters of a book (ordered by order field)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Chapter list with nested pages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Chapter' }
+
+    post:
+      tags: [Chapters]
+      summary: Add a chapter to a book
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:       { type: string, example: "Chapter 3: The Turning Point" }
+                description: { type: string, nullable: true }
+                order:       { type: integer, description: "Auto-assigned if omitted" }
+      responses:
+        '201':
+          description: Chapter created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Chapter' }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /chapters/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    put:
+      tags: [Chapters]
+      summary: Update a chapter
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:       { type: string }
+                description: { type: string, nullable: true }
+                order:       { type: integer }
+      responses:
+        '200':
+          description: Chapter updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Chapter' }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+    delete:
+      tags: [Chapters]
+      summary: Soft-delete a chapter (and all its pages)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Chapter deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Chapter deleted." }
+
+  # ─────────────────────────────────────────
+  # PAGES
+  # ─────────────────────────────────────────
+
+  /chapters/{id}/pages:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+        description: Chapter ID
+
+    get:
+      tags: [Pages]
+      summary: List pages of a chapter (ordered by page_number)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Pages list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: '#/components/schemas/Page' }
+
+    post:
+      tags: [Pages]
+      summary: Add a page to a chapter
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [content]
+              properties:
+                content:
+                  type: string
+                  example: "<p>The sun rose over the mountains...</p>"
+                content_type:
+                  type: string
+                  enum: [html, text, markdown]
+                  default: html
+                page_number:
+                  type: integer
+                  description: Auto-incremented if omitted
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Page' }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /pages/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    put:
+      tags: [Pages]
+      summary: Update a page
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                content:      { type: string }
+                content_type: { type: string, enum: [html, text, markdown] }
+                page_number:  { type: integer }
+      responses:
+        '200':
+          description: Page updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string }
+                  data:    { $ref: '#/components/schemas/Page' }
+
+    delete:
+      tags: [Pages]
+      summary: Soft-delete a page
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Page deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Page deleted." }
+
+  # ─────────────────────────────────────────
+  # UPLOAD
+  # ─────────────────────────────────────────
+
+  /books/{id}/upload:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Upload]
+      summary: Upload a .doc/.docx manuscript
+      description: |
+        Accepts a Word document and dispatches a background conversion job.
+        Returns `202 Accepted` immediately. Once the job completes, the
+        document's headings become chapters and the body text is split into pages.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [manuscript]
+              properties:
+                manuscript:
+                  type: string
+                  format: binary
+                  description: .doc or .docx file, max 20 MB
+      responses:
+        '202':
+          description: File accepted, conversion queued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:   { type: string, example: "Manuscript uploaded. Conversion is being processed in the background." }
+                  file_path: { type: string, example: "manuscripts/5/my-book.docx" }
+        '403':
+          description: Not owner or book is published
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: File missing, wrong format, or exceeds 20 MB
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  # ─────────────────────────────────────────
+  # WORKFLOW
+  # ─────────────────────────────────────────
+
+  /books/{id}/submit:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Workflow]
+      summary: Submit book for review
+      description: |
+        Runs content moderation before submitting. If profanity or restricted words
+        are detected, the request is rejected with 422 and the offending words listed.
+        Valid from status: `draft` or `rejected`.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book submitted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book submitted for review." }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Not an author or not the owner
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Invalid status transition or moderation failure
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Book failed content moderation and cannot be submitted."
+                  flagged_items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        type: { type: string, enum: [profanity, restricted_word] }
+                        word: { type: string }
+
+  /books/{id}/approve:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Workflow]
+      summary: Approve a submitted book
+      description: |
+        Reviewer-only. Valid from status: `submitted` or `under_review`.
+        Notifies the author by email and database notification.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book approved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book approved." }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Not a reviewer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Book not in a reviewable state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  /books/{id}/reject:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Workflow]
+      summary: Reject a submitted book
+      description: Reviewer-only. A mandatory rejection reason must be provided.
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  minLength: 10
+                  maxLength: 1000
+                  example: "Content needs major revision in chapters 2 and 4."
+      responses:
+        '200':
+          description: Book rejected
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book rejected." }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Not a reviewer
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Reason field required or invalid state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  /books/{id}/publish:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+
+    post:
+      tags: [Workflow]
+      summary: Publish an approved book
+      description: |
+        Admin-only. Valid from status: `approved` only.
+        Once published, the book is **permanently read-only** — all write operations will return 403.
+        Notifies the author by email and database notification.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Book published
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: { type: string, example: "Book published successfully." }
+                  data:    { $ref: '#/components/schemas/Book' }
+        '403':
+          description: Not an admin
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '422':
+          description: Book not in approved state
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+
+  # ─────────────────────────────────────────
+  # DASHBOARD
+  # ─────────────────────────────────────────
+
+  /dashboard:
+    get:
+      tags: [Dashboard]
+      summary: Role-specific statistics dashboard
+      description: |
+        Returns stats tailored to the authenticated user's role.
+        Response is **cached for 5 minutes** per user (Redis if configured).
+
+        **Author:** total books, breakdown by status, 5 most recent books.
+        **Reviewer:** count of books pending review, 5 recently reviewed.
+        **Admin:** books by status, 5 recently published, total user count.
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Dashboard data
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    description: Structure varies by role (author / reviewer / admin)
+                    example:
+                      role: "author"
+                      total_books: 12
+                      by_status:
+                        draft: 4
+                        submitted: 2
+                        published: 6
+                      recent_books:
+                        - id: 12
+                          title: "New Draft"
+                          status: "draft"
+                          created_at: "2024-01-15T10:00:00+00:00"
